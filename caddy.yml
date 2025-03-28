@@ -1,0 +1,96 @@
+- name: Deploy Caddy Web Server
+  gather_facts: false
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create Caddy config path
+      ansible.builtin.file:
+        path: /etc/caddy
+        state: directory
+    - name: Create default caddy config
+      ansible.builtin.copy:
+        dest: /etc/caddy/Caddyfile
+        force: false
+        content: |
+          {
+            admin off
+          }
+
+          :80 {
+            bind fd/3 {
+              protocols h1 h2c
+            }
+            log
+            respond "Hello, world."
+          }
+
+          https://example.com {
+            bind fd/4 {
+              protocols h1 h2
+            }
+            bind fdgram/5 {
+              protocols h3
+            }
+            log
+            respond "Hello, world."
+          }
+    - name: Create network file
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/caddy.network
+        content: |
+          [Network]
+          Subnet=100.80.0.0/24
+          Gateway=100.80.0.1
+    - name: Create socket file
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/caddy.socket
+        content: |
+          [Unit]
+          Description=Caddy Socket
+
+          [Socket]
+          ListenStream=80
+          ListenStream=443
+          ListenDatagram=443
+          BindIPv6Only=both
+
+          [Install]
+          WantedBy=default.target
+    - name: Create caddy_data volume file
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/caddy_data.volume
+        content: |
+          [Volume]
+    - name: Create caddy_config volume file
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/caddy_config.volume
+        content: |
+          [Volume]
+    - name: Create container file
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/caddy.container
+        content: |
+          [Container]
+          Image=docker.io/caddy
+          AutoUpdate=registry
+          Network=caddy.network
+          Volume=/etc/caddy:/etc/caddy
+          Volume=caddy_config.volume:/config
+          Volume=caddy_data.volume:/data
+          Notify=true
+
+          [Service]
+          TimeoutStartSec=900
+
+          [Install]
+          WantedBy=default.target
+
+    - name: Reload systemd daemon
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+    - name: Enable caddy socket
+      ansible.builtin.systemd_service:
+        name: caddy.socket
+        enabled: true
+        state: started

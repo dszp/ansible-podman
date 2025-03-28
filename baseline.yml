@@ -1,0 +1,106 @@
+- name: Configure System Baseline
+  gather_facts: false
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Enable ELRepo Repository
+      ansible.builtin.dnf:
+        name: elrepo-release
+    - name: Import ELRepo key
+      ansible.builtin.rpm_key:
+        key: /etc/pki/rpm-gpg/RPM-GPG-KEY-elrepo.org
+    - name: Enable ELRepo-Kernel Repository
+      community.general.dnf_config_manager:
+        name: elrepo-kernel
+    - name: Install mainline kernel
+      ansible.builtin.dnf:
+        name: kernel-ml
+        state: latest
+    - name: Install DNF Automatic
+      ansible.builtin.dnf:
+        name: dnf-automatic
+    - name: Configure DNF Automatic - Random Sleep
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/automatic.conf
+        regexp: '^random_sleep ='
+        line: 'random_sleep = 900'
+    - name: Configure DNF Automatic - Enable Installation of Updates
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/automatic.conf
+        regexp: '^apply_updates ='
+        line: 'apply_updates = yes'
+    - name: Configure DNF Automatic - Enable Automatic Reboots
+      ansible.builtin.lineinfile:
+        path: /etc/dnf/automatic.conf
+        regexp: '^reboot ='
+        line: 'reboot = when-needed'
+    - name: Configure DNF Automatic - Enable Systemd Timer
+      ansible.builtin.systemd_service:
+        name: dnf-automatic.timer
+        enabled: true
+    - name: Auto-remove unused packages
+      ansible.builtin.dnf:
+        autoremove: true
+    - name: Install podman
+      ansible.builtin.dnf:
+        name: podman
+    - name: Update all packages
+      ansible.builtin.dnf:
+        state: latest
+        update_only: true
+    - name: Check if reboot is needed
+      ansible.builtin.command: dnf needs-restarting -r
+      register: needsrestarting
+      failed_when: "'Failed' in needsrestarting.stderr"
+      changed_when: needsrestarting.rc == 1
+      notify: Reboot system
+    - name: Delete podman user
+      ansible.builtin.user:
+        name: podman
+        state: absent
+    - name: Set default kernel to latest 6.x kernel
+      ansible.builtin.shell:
+        cmd: "grubby --set-default=`ls --time=creation /boot/vmlinuz-6.* | head -n 1`"
+    - name: Sysctl Tunings
+      notify: Reboot system
+      ansible.posix.sysctl:
+        name: "{{ item[0] }}"
+        value: "{{ item[1] }}"
+        sysctl_file: /etc/sysctl.d/90-ansible.conf
+        sysctl_set: true
+      loop:
+        - ['vm.swappiness', 0]
+        - ['vm.overcommit_memory', 1]
+        - ['vm.vfs_cache_pressure', 60]
+        - ['vm.dirty_ratio', 5]
+        - ['vm.dirty_background_ratio', 1]
+        - ['vm.watermark_boost_factor', 0]
+        - ['vm.watermark_scale_factor', 125]
+        - ['vm.page-cluster', 0]
+        - ['net.core.rmem_default', 262144]
+        - ['net.core.rmem_max', 67108864]
+        - ['net.ipv4.tcp_rmem', '8192 262144 8388608']
+        - ['net.core.wmem_default', 131072]
+        - ['net.core.wmem_max', 67108864]
+        - ['net.ipv4.tcp_wmem', '4096 131072 8388608']
+        - ['net.ipv4.tcp_adv_win_scale', '-2']
+        - ['net.ipv4.tcp_notsent_lowat', '131072']
+        - ['net.core.default_qdisc', 'fq']
+        - ['net.ipv4.tcp_congestion_control', 'bbr']
+        - ['net.ipv4.tcp_fastopen', '3']
+        - ['net.core.netdev_max_backlog', '32768']
+        - ['net.ipv4.tcp_base_mss', '1400']
+        - ['net.ipv4.tcp_min_rtt_wlen', '60']
+        - ['net.ipv4.tcp_no_metrics_save', '1']
+        - ['net.ipv4.tcp_slow_start_after_idle', '1']
+        - ['net.ipv4.tcp_syn_retries', '2']
+        - ['net.ipv4.tcp_synack_retries', '2']
+        - ['net.ipv4.tcp_syncookies', '1']
+        - ['net.ipv4.tcp_retries2', '8']
+        - ['net.ipv4.tcp_mtu_probing', '1']
+
+  handlers:
+    - name: Reboot system
+      ansible.builtin.reboot:
+        msg: "Rebooting for system patching"
