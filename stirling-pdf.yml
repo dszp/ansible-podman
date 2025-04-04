@@ -1,0 +1,75 @@
+- name: Deploy Stirling-PDF
+  gather_facts: false
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create training volume
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/sterlingpdf-training.volume
+        content: |
+          [Volume]
+    - name: Create extra-configs volume
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/sterlingpdf-extra-configs.volume
+        content: |
+          [Volume]
+    - name: Create custom-files volume
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/sterlingpdf-custom-files.volume
+        content: |
+          [Volume]
+    - name: Create logs volume
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/sterlingpdf-logs.volume
+        content: |
+          [Volume]
+    - name: Create pipeline volume
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/sterlingpdf-pipeline.volume
+        content: |
+          [Volume]
+    - name: Create container
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/sterlingpdf.container
+        content: |
+          [Container]
+          Image=docker.stirlingpdf.com/stirlingtools/stirling-pdf
+          Pull=always
+          AutoUpdate=registry
+          Network=caddy.network
+          NetworkAlias=stirling-pdf
+          Volume=sterlingpdf-training.volume:/usr/share/tessdata
+          Volume=sterlingpdf-extra-configs.volume:/configs
+          Volume=sterlingpdf-custom-files.volume:/customFiles
+          Volume=sterlingpdf-logs.volume:/logs
+          Volume=sterlingpdf-pipeline.volume:/pipeline
+          Environment='DOCKER_ENABLE_SECURITY=false'
+          Environment='LANGS=en_US'
+
+          [Service]
+          Restart=always
+          TimeoutStartSec=900
+
+          [Install]   
+          WantedBy=default.target
+    - name: Start container
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+        service: sterlingpdf.service
+        state: started
+    - name: Create caddyfile
+      notify: Restart caddy
+      ansible.builtin.copy:
+        dest: /etc/caddy/sites/pdf
+        content: |
+          https://pdf.apps.codatory.net {
+            import binding
+            reverse_proxy http://stirling-pdf:8080
+          }
+
+  handlers:
+    - name: Restart caddy
+      ansible.builtin.systemd_service:
+        name: caddy.service
+        state: stopped
