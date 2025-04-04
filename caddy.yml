@@ -139,5 +139,5 @@
     - name: Restart caddy
       ansible.builtin.systemd_service:
         name: caddy.service
-        state: stopped
+        state: restarted
 
