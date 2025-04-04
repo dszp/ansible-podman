@@ -4,37 +4,72 @@
   become: true
 
   tasks:
+    - name: Install Firewalld
+      ansible.builtin.dnf:
+        name: firewalld
+    - name: Enable Firewalld
+      ansible.builtin.systemd_service:
+        name: firewalld
+        state: started
+        enabled: true
+    - name: Allow HTTP
+      ansible.posix.firewalld:
+        service: http
+        permanent: true
+        state: enabled
+        immediate: true
+    - name: Allow HTTPS
+      ansible.posix.firewalld:
+        service: https
+        permanent: true
+        state: enabled
+        immediate: true
     - name: Create Caddy config path
       ansible.builtin.file:
         path: /etc/caddy
         state: directory
-    - name: Create default caddy config
+    - name: Create Caddy sites path
+      ansible.builtin.file:
+        path: /etc/caddy/sites
+        state: directory
+    - name: Create main caddy config
       ansible.builtin.copy:
         dest: /etc/caddy/Caddyfile
-        force: false
+        force: true
         content: |
           {
             admin off
+            local_certs
+            skip_install_trust
+            http_port 80
+            https_port 443
+            auto_https disable_redirects 
           }
 
-          :80 {
-            bind fd/3 {
-              protocols h1 h2c
-            }
-            log
-            respond "Hello, world."
-          }
-
-          https://example.com {
+          (binding) {
             bind fd/4 {
               protocols h1 h2
             }
             bind fdgram/5 {
               protocols h3
             }
+          }
+
+          http:// {
+            bind fd/3 {
+              protocols h1 h2c
+            }
+            log
+            redir https://{host}{uri}
+          }
+
+          https:// {
+            import binding
             log
             respond "Hello, world."
           }
+ 
+          import sites/*
     - name: Create network file
       ansible.builtin.copy:
         dest: /etc/containers/systemd/caddy.network
@@ -54,6 +89,11 @@
           ListenStream=443
           ListenDatagram=443
           BindIPv6Only=both
+          NoDelay=true
+          DeferAcceptSec=5
+          ReusePort=true
+          Timestamping=us
+          TCPCongestion=bbr
 
           [Install]
           WantedBy=default.target
@@ -73,19 +113,21 @@
         content: |
           [Container]
           Image=docker.io/caddy
+          Pull=always
           AutoUpdate=registry
           Network=caddy.network
+          NetworkAlias=caddy
           Volume=/etc/caddy:/etc/caddy
           Volume=caddy_config.volume:/config
           Volume=caddy_data.volume:/data
           Notify=true
 
           [Service]
+          Restart=always
           TimeoutStartSec=900
 
           [Install]
           WantedBy=default.target
-
     - name: Reload systemd daemon
       ansible.builtin.systemd_service:
         daemon_reload: true
@@ -94,3 +136,8 @@
         name: caddy.socket
         enabled: true
         state: started
+    - name: Restart caddy
+      ansible.builtin.systemd_service:
+        name: caddy.service
+        state: stopped
+
