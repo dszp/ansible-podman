@@ -39,6 +39,10 @@
       ansible.builtin.systemd_service:
         name: dnf-automatic.timer
         enabled: true
+    - name: Enable podman auto update
+      ansible.builtin.systemd_service:
+        name: podman-auto-update.timer
+        enabled: true
     - name: Auto-remove unused packages
       ansible.builtin.dnf:
         autoremove: true
@@ -55,10 +59,6 @@
       failed_when: "'Failed' in needsrestarting.stderr"
       changed_when: needsrestarting.rc == 1
       notify: Reboot system
-    - name: Delete podman user
-      ansible.builtin.user:
-        name: podman
-        state: absent
     - name: Set default kernel to latest 6.x kernel
       ansible.builtin.shell:
         cmd: "grubby --set-default=`ls --time=creation /boot/vmlinuz-6.* | head -n 1`"
