@@ -1,0 +1,51 @@
+- name: Deploy LibreSpeed
+  gather_facts: false
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create volume
+      notify: Reload systemd daemon
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/librespeed.volume
+        content: |
+          [Volume]
+    - name: Create container
+      notify: Reload systemd daemon
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/librespeed.container
+        content: |
+          [Container]
+          Image=ghcr.io/librespeed/speedtest
+          Pull=always
+          AutoUpdate=registry
+          Volume=librespeed.volume:/database
+          Network=caddy.network
+          NetworkAlias=librespeed
+
+          [Service]
+          Restart=always
+          TimeoutStartSec=900
+
+          [Install]   
+          WantedBy=default.target
+    - name: Start container
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+        service: librespeed.service
+        state: started
+    - name: Create caddyfile
+      notify: Restart caddy
+      ansible.builtin.copy:
+        dest: /etc/caddy/sites/speed
+        content: |
+          https://speed.apps.codatory.net {
+            import binding
+            reverse_proxy http://librespeed:8080
+          }
+
+  handlers:
+    - name: Restart caddy
+      ansible.builtin.systemd_service:
+        name: caddy.service
+        state: stopped
