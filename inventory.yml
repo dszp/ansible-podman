@@ -1,5 +1,5 @@
 all:
   hosts:
-    192.168.122.130:
+    192.168.1.26:
   vars:
-    ansible_user: root
+    ansible_user: codatory
