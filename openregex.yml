@@ -1,0 +1,43 @@
+- name: Deploy OpenRegex
+  gather_facts: false
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create container
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/openregex.container
+        content: |
+          [Container]
+          Image=docker.io/sunnev/openregex
+          Pull=always
+          AutoUpdate=registry
+          Network=caddy.network
+          NetworkAlias=openregex
+
+          [Service]
+          Restart=always
+          TimeoutStartSec=900
+
+          [Install]   
+          WantedBy=default.target
+    - name: Start container
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+        service: openregex.service
+        state: started
+    - name: Create caddyfile
+      notify: Restart caddy
+      ansible.builtin.copy:
+        dest: /etc/caddy/sites/regex
+        content: |
+          https://regex.apps.codatory.net {
+            import binding
+            reverse_proxy http://openregex:5000
+          }
+
+  handlers:
+    - name: Restart caddy
+      ansible.builtin.systemd_service:
+        name: caddy.service
+        state: stopped
