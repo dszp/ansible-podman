@@ -4,6 +4,9 @@
   become: true
 
   tasks:
+    - name: Enable EPEL Repository
+      ansible.builtin.dnf:
+        name: epel-release
     - name: Enable ELRepo Repository
       ansible.builtin.dnf:
         name: elrepo-release
@@ -49,6 +52,9 @@
     - name: Install podman
       ansible.builtin.dnf:
         name: podman
+    - name: Install htop
+      ansible.builtin.dnf:
+        name: htop
     - name: Update all packages
       ansible.builtin.dnf:
         state: latest
