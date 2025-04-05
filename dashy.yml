@@ -1,0 +1,49 @@
+- name: Deploy Dashy
+  gather_facts: false
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create user-data volume
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/dashy.volume
+        content: |
+          [Volume]
+    - name: Create container
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/dashy.container
+        content: |
+          [Container]
+          Image=docker.io/lissy93/dashy
+          Pull=always
+          AutoUpdate=registry
+          Network=caddy.network
+          NetworkAlias=dashy
+          Volume=dashy.volume:/app/user-data
+
+          [Service]
+          Restart=always
+          TimeoutStartSec=900
+
+          [Install]   
+          WantedBy=default.target
+    - name: Start container
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+        service: dashy.service
+        state: started
+    - name: Create caddyfile
+      notify: Restart caddy
+      ansible.builtin.copy:
+        dest: /etc/caddy/sites/dashy
+        content: |
+          https://apps.codatory.net {
+            import binding
+            reverse_proxy http://dashy:8080
+          }
+
+  handlers:
+    - name: Restart caddy
+      ansible.builtin.systemd_service:
+        name: caddy.service
+        state: stopped
