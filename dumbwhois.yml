@@ -1,0 +1,43 @@
+- name: Deploy DumbWhois
+  gather_facts: false
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create container
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/dumbwhois.container
+        content: |
+          [Container]
+          Image=docker.io/dumbwareio/dumbwhois
+          Pull=always
+          AutoUpdate=registry
+          Network=caddy.network
+          NetworkAlias=dumbwhois
+
+          [Service]
+          Restart=always
+          TimeoutStartSec=900
+
+          [Install]   
+          WantedBy=default.target
+    - name: Start container
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+        service: dumbwhois.service
+        state: started
+    - name: Create caddyfile
+      notify: Restart caddy
+      ansible.builtin.copy:
+        dest: /etc/caddy/sites/whois
+        content: |
+          https://whois.apps.codatory.net {
+            import binding
+            reverse_proxy http://dumbwhois:3000
+          }
+
+  handlers:
+    - name: Restart caddy
+      ansible.builtin.systemd_service:
+        name: caddy.service
+        state: stopped
