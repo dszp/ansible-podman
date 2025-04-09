@@ -5,13 +5,11 @@
 
   tasks:
     - name: Create volume
-      notify: Reload systemd daemon
       ansible.builtin.copy:
         dest: /etc/containers/systemd/librespeed.volume
         content: |
           [Volume]
     - name: Create container
-      notify: Reload systemd daemon
       ansible.builtin.copy:
         dest: /etc/containers/systemd/librespeed.container
         content: |
