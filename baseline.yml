@@ -42,16 +42,16 @@
       ansible.builtin.systemd_service:
         name: dnf-automatic.timer
         enabled: true
-    - name: Enable podman auto update
-      ansible.builtin.systemd_service:
-        name: podman-auto-update.timer
-        enabled: true
     - name: Auto-remove unused packages
       ansible.builtin.dnf:
         autoremove: true
     - name: Install podman
       ansible.builtin.dnf:
         name: podman
+    - name: Enable podman auto update
+      ansible.builtin.systemd_service:
+        name: podman-auto-update.timer
+        enabled: true
     - name: Install htop
       ansible.builtin.dnf:
         name: htop
