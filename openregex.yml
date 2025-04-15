@@ -32,7 +32,6 @@
         dest: /etc/caddy/sites/regex
         content: |
           https://regex.apps.codatory.net {
-            import binding
             reverse_proxy http://openregex:5000
           }
 

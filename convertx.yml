@@ -39,7 +39,6 @@
         dest: /etc/caddy/sites/convert
         content: |
           https://convert.apps.codatory.net {
-            import binding
             reverse_proxy http://convertx:3000
           }
 

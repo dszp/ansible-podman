@@ -32,7 +32,6 @@
         dest: /etc/caddy/sites/draw
         content: |
           https://draw.apps.codatory.net {
-            import binding
             reverse_proxy http://excalidraw:80
           }
 

@@ -32,7 +32,6 @@
         dest: /etc/caddy/sites/mazanoke
         content: |
           https://mazanoke.apps.codatory.net {
-            import binding
             reverse_proxy http://mazanoke:80
           }
 

@@ -38,7 +38,6 @@
         dest: /etc/caddy/sites/speed
         content: |
           https://speed.apps.codatory.net {
-            import binding
             reverse_proxy http://librespeed:8080
           }
 

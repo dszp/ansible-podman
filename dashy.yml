@@ -38,7 +38,6 @@
         dest: /etc/caddy/sites/dashy
         content: |
           https://apps.codatory.net {
-            import binding
             reverse_proxy http://dashy:8080
           }
 

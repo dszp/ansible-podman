@@ -32,7 +32,6 @@
         dest: /etc/caddy/sites/it-tools
         content: |
           https://it-tools.apps.codatory.net {
-            import binding
             reverse_proxy http://it-tools:80
           }
 
