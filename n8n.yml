@@ -1,0 +1,60 @@
+- name: Deploy n8n
+  gather_facts: false
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Create data volume
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/n8n-data.volume
+        content: |
+          [Volume]
+    - name: Create files volume
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/n8n-files.volume
+        content: |
+          [Volume]
+    - name: Create n8n container
+      ansible.builtin.copy:
+        dest: /etc/containers/systemd/n8n.container
+        content: |
+          [Container]
+          Image=docker.n8n.io/n8nio/n8n
+          Pull=always
+          AutoUpdate=registry
+          Network=caddy.network
+          NetworkAlias=n8n
+          Volume=n8n-data.volume:/home/node/.n8n
+          Volume=n8n-files.volume:/files
+          Environment='N8N_HOST=n8n.apps.codatory.net'
+          Environment='N8N_PROTOCOL=HTTPS'
+          Environment='N8N_PORT=5678'
+          Environment='NODE_ENV=production'
+          Environment='WEBHOOK_URL=https://n8n.apps.codatory.net''
+          Environment='GENERIC_TIMEZONE=America/Indiana/Indianapolis'
+
+          [Service]
+          Restart=always
+          TimeoutStartSec=900
+
+          [Install]   
+          WantedBy=default.target
+    - name: Start container
+      ansible.builtin.systemd_service:
+        daemon_reload: true
+        service: n8n.service
+        state: started
+    - name: Create caddyfile
+      notify: Restart caddy
+      ansible.builtin.copy:
+        dest: /etc/caddy/sites/n8n
+        content: |
+          https://n8n.apps.codatory.net {
+            reverse_proxy http://n8n:5678
+          }
+
+  handlers:
+    - name: Restart caddy
+      ansible.builtin.systemd_service:
+        name: caddy.service
+        state: stopped
