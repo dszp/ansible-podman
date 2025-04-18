@@ -30,7 +30,7 @@
           Environment='N8N_PROTOCOL=HTTPS'
           Environment='N8N_PORT=5678'
           Environment='NODE_ENV=production'
-          Environment='WEBHOOK_URL=https://n8n.apps.codatory.net''
+          Environment='WEBHOOK_URL=https://n8n.apps.codatory.net'
           Environment='GENERIC_TIMEZONE=America/Indiana/Indianapolis'
 
           [Service]
