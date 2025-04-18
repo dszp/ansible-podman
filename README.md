@@ -5,6 +5,8 @@
 
 These playbooks are designed to run against [AlmaLinux](https://almalinux.org/), tested against AlmaLinux 9 x64.
 
+The playbooks are designed to enable automatic updates, both for the operating system and the containers being run.
+
 ## Notes
 
 Generic command to run ansible playbook: `ansible-playbook -i hosts baseline.yml`
