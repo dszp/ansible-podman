@@ -50,9 +50,6 @@
             }
           }
 
-          (binding) {
-          }
-
           http:// {
             bind fd/3 {
               protocols h1
