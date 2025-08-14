@@ -27,11 +27,12 @@
           Volume=n8n-data.volume:/home/node/.n8n
           Volume=n8n-files.volume:/files
           Environment='N8N_HOST=n8n.apps.codatory.net'
-          Environment='N8N_PROTOCOL=HTTPS'
+          Environment='N8N_PROTOCOL=http'
           Environment='N8N_PORT=5678'
           Environment='NODE_ENV=production'
           Environment='WEBHOOK_URL=https://n8n.apps.codatory.net'
           Environment='GENERIC_TIMEZONE=America/Indiana/Indianapolis'
+          Environment='N8N_PROXY_HOPS=1'
 
           [Service]
           Restart=always
